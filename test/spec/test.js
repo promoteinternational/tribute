@@ -798,3 +798,40 @@ describe("Tribute loadingItemTemplate", function() {
     });
   });
 });
+
+describe("When Tribute.exactMatch is true", function() {
+  afterEach(function() {
+    clearDom();
+  });
+
+  it("should only return items that match input exactly", () => {
+    let input = createDomElement();
+
+    let collectionObject = {
+      exactMatch: true,
+      values: [
+        {
+          key: "abcd",
+          value: "abcdefg",
+          email: "abcdefg@zurb.com"
+        },
+        {
+          key: "axbxcxd",
+          value: "axbxcxd",
+          email: "axbxcxd@zurb.com"
+        }
+      ]
+    };
+
+    let tribute = attachTribute(collectionObject, input.id);
+    fillIn(input, "@abc");
+
+    const popupList = document.querySelectorAll(".tribute-container > ul > li");
+    expect(popupList.length).toBe(1);
+
+    let containerDiv = document.getElementsByClassName("tribute-container")[0];
+    expect(containerDiv.innerText).toBe("abcd");
+
+    detachTribute(tribute, input.id);
+  });
+});
