@@ -83,33 +83,50 @@
   }
 
   if (!Array.prototype.find) {
-    Array.prototype.find = function (predicate) {
-      if (this === null) {
-        throw new TypeError('Array.prototype.find called on null or undefined');
-      }
-
-      if (typeof predicate !== 'function') {
-        throw new TypeError('predicate must be a function');
-      }
-
-      var list = Object(this);
-      var length = list.length >>> 0;
-      var thisArg = arguments[1];
-      var value;
-
-      for (var i = 0; i < length; i++) {
-        value = list[i];
-
-        if (predicate.call(thisArg, value, i, list)) {
-          return value;
+    Object.defineProperty(Array.prototype, 'find', {
+      value: function value(predicate) {
+        // 1. Let O be ? ToObject(this value).
+        if (this == null) {
+          throw TypeError('"this" is null or not defined');
         }
-      }
 
-      return undefined;
-    };
+        var o = Object(this); // 2. Let len be ? ToLength(? Get(O, "length")).
+
+        var len = o.length >>> 0; // 3. If IsCallable(predicate) is false, throw a TypeError exception.
+
+        if (typeof predicate !== 'function') {
+          throw TypeError('predicate must be a function');
+        } // 4. If thisArg was supplied, let T be thisArg; else let T be undefined.
+
+
+        var thisArg = arguments[1]; // 5. Let k be 0.
+
+        var k = 0; // 6. Repeat, while k < len
+
+        while (k < len) {
+          // a. Let Pk be ! ToString(k).
+          // b. Let kValue be ? Get(O, Pk).
+          // c. Let testResult be ToBoolean(? Call(predicate, T, « kValue, k, O »)).
+          // d. If testResult is true, return kValue.
+          var kValue = o[k];
+
+          if (predicate.call(thisArg, kValue, k, o)) {
+            return kValue;
+          } // e. Increase k by 1.
+
+
+          k++;
+        } // 7. Return undefined.
+
+
+        return undefined;
+      },
+      configurable: true,
+      writable: true
+    });
   }
 
-  if (window && typeof window.CustomEvent !== "function") {
+  if (typeof window !== 'undefined' && typeof window.CustomEvent !== "function") {
     var CustomEvent$1 = function CustomEvent(event, params) {
       params = params || {
         bubbles: false,
@@ -142,16 +159,16 @@
         element.boundKeydown = this.keydown.bind(element, this);
         element.boundKeyup = this.keyup.bind(element, this);
         element.boundInput = this.input.bind(element, this);
-        element.addEventListener("keydown", element.boundKeydown, false);
-        element.addEventListener("keyup", element.boundKeyup, false);
-        element.addEventListener("input", element.boundInput, false);
+        element.addEventListener("keydown", element.boundKeydown, true);
+        element.addEventListener("keyup", element.boundKeyup, true);
+        element.addEventListener("input", element.boundInput, true);
       }
     }, {
       key: "unbind",
       value: function unbind(element) {
-        element.removeEventListener("keydown", element.boundKeydown, false);
-        element.removeEventListener("keyup", element.boundKeyup, false);
-        element.removeEventListener("input", element.boundInput, false);
+        element.removeEventListener("keydown", element.boundKeydown, true);
+        element.removeEventListener("keyup", element.boundKeyup, true);
+        element.removeEventListener("input", element.boundInput, true);
         delete element.boundKeydown;
         delete element.boundKeyup;
         delete element.boundInput;
@@ -1207,9 +1224,12 @@
         var best, temp;
 
         while (index > -1) {
-          patternCache.push(index);
-          temp = this.traverse(string, pattern, index + 1, patternIndex + 1, patternCache);
-          patternCache.pop(); // if downstream traversal failed, return best answer so far
+          if (this.continueTraversal(patternCache, index)) {
+            patternCache.push(index);
+            temp = this.traverse(string, pattern, index + 1, patternIndex + 1, patternCache);
+            patternCache.pop();
+          } // if downstream traversal failed, return best answer so far
+
 
           if (!temp) {
             return best;
@@ -1250,6 +1270,19 @@
           rendered += pre + string[index] + post + string.substring(index + 1, indices[i + 1] ? indices[i + 1] : string.length);
         });
         return rendered;
+      }
+    }, {
+      key: "continueTraversal",
+      value: function continueTraversal(patternCache, index) {
+        if (!this.tribute.exactMatch || patternCache.length < 1) {
+          return true;
+        }
+
+        if (this.tribute.exactMatch && patternCache[patternCache.length - 1] + 1 === index) {
+          return true;
+        }
+
+        return false;
       }
     }, {
       key: "filter",
@@ -1343,7 +1376,9 @@
           _ref$menuItemLimit = _ref.menuItemLimit,
           menuItemLimit = _ref$menuItemLimit === void 0 ? null : _ref$menuItemLimit,
           _ref$menuShowMinLengt = _ref.menuShowMinLength,
-          menuShowMinLength = _ref$menuShowMinLengt === void 0 ? 0 : _ref$menuShowMinLengt;
+          menuShowMinLength = _ref$menuShowMinLengt === void 0 ? 0 : _ref$menuShowMinLengt,
+          _ref$exactMatch = _ref.exactMatch,
+          exactMatch = _ref$exactMatch === void 0 ? false : _ref$exactMatch;
 
       _classCallCheck(this, Tribute);
 
@@ -1359,6 +1394,7 @@
       this.positionMenu = positionMenu;
       this.hasTrailingSpace = false;
       this.spaceSelectsMatch = spaceSelectsMatch;
+      this.exactMatch = exactMatch;
 
       if (this.autocompleteMode) {
         trigger = "";
