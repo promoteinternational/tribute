@@ -68,10 +68,11 @@ class TributeSearch {
         let best, temp
 
         while (index > -1) {
-            patternCache.push(index)
-            temp = this.traverse(string, pattern, index + 1, patternIndex + 1, patternCache)
-            patternCache.pop()
-
+            if (this.continueTraversal(patternCache, index)) {
+              patternCache.push(index)
+              temp = this.traverse(string, pattern, index + 1, patternIndex + 1, patternCache)
+              patternCache.pop()
+            }
             // if downstream traversal failed, return best answer so far
             if (!temp) {
                 return best
@@ -116,6 +117,16 @@ class TributeSearch {
         })
 
         return rendered
+    }
+
+    continueTraversal(patternCache, index) {
+      if (!this.tribute.exactMatch || patternCache.length < 1) {
+        return true;
+      }
+      if (this.tribute.exactMatch && patternCache[patternCache.length -1] + 1 === index) {
+        return true;
+      }
+      return false;
     }
 
     filter(pattern, arr, opts) {
